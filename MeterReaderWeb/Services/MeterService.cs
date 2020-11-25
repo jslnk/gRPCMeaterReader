@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using MeterReaderWeb.Data;
 using MeterReaderWeb.Data.Entities;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,25 @@ namespace MeterReaderWeb.Services
         public MeterService(ILogger<MeterService> logger, IReadingRepository repository)
         {
             _logger = logger;
+
             _repository = repository;
         }
+
+
+        public override async Task<Empty> SendDiagnostics(IAsyncStreamReader<ReadingMessage> requestStream, ServerCallContext context)
+        {
+            var theTask = Task.Run(async () =>
+            {
+                await foreach (var reading in requestStream.ReadAllAsync())
+                {
+                    _logger.LogInformation($"Received Reading : {reading}");
+                }
+            });
+
+            await theTask;
+            return new Empty();
+        }
+
 
         public async override Task<StatusMessage> AddReading(ReadingPacket request, ServerCallContext context)
         {
